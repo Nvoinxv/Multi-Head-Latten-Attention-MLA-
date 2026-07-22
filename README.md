@@ -203,10 +203,10 @@ Berikut adalah contoh inisiasi model *GPT-Style* dengan dukungan MoE:
 
 ```python
 import torch
-from model import GPTStyleMoEModel
+from model import Nvoin_Language_Model
 
 # Konfigurasi Model
-model = GPTStyleMoEModel(
+model = Nvoin_Language_Model(
     vocab_size=32000,
     d_model=512,
     n_layers=6,
