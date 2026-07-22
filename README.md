@@ -1,11 +1,12 @@
-# 🚀 Multi-Head Latent Attention (MLA) & Mixture-of-Experts (MoE)
+# 🚀 NVOIN — Multi-Head Latent Attention (MLA) & Mixture-of-Experts (MoE) dari Nol
 
-> Implementasi PyTorch komprehensif untuk **Multi-Head Latent Attention (MLA)**. Arsitektur ini mengadopsi mekanisme attention efisien memori yang diperkenalkan pada model **DeepSeek-V2**, dilengkapi dengan **Decoupled Rotary Positional Embedding (RoPE)** dan terintegrasi penuh dengan **Mixture-of-Experts (MoE) Feed Forward Network**.
+> Implementasi PyTorch edukatif untuk **Multi-Head Latent Attention (MLA)**, mekanisme attention efisien memori dari **DeepSeek-V2**, dilengkapi **Decoupled Rotary Positional Embedding (RoPE)** dan **Mixture-of-Experts (MoE) Feed Forward Network**. Seluruh implementasi — mulai dari load dataset, tokenisasi, arsitektur model, training, sampai inference — ada dalam **satu Jupyter Notebook**: `AI_Transfomers.ipynb`.
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python&logoColor=white)
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.x-EE4C2C?logo=pytorch&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-green)
-![Status](https://img.shields.io/badge/Status-Educational%20Implementation-yellow)
+![Status](https://img.shields.io/badge/Status-Educational%20Notebook-yellow)
+
+> ⚠️ **Catatan struktur:** proyek ini **belum** berupa package/repo modular (tidak ada `model.py`, `mla.py`, `moe.py`, dll). Semua kode berada di dalam notebook. Bagian "Instalasi" dan "Penggunaan" di bawah disesuaikan dengan kondisi ini.
 
 ---
 
@@ -16,43 +17,39 @@
 3. [Arsitektur Keseluruhan](#arsitektur-keseluruhan)
 4. [Formulasi Matematis (LaTeX)](#formulasi-matematis-latex)
 5. [Decoupled RoPE](#decoupled-rope)
-6. [Struktur Model Lengkap](#struktur-model-lengkap)
+6. [Struktur Notebook (Cell-by-Cell)](#struktur-notebook-cell-by-cell)
 7. [Instalasi](#instalasi)
-8. [Penggunaan Cepat](#penggunaan-cepat)
-9. [Struktur Proyek](#struktur-proyek)
-10. [Perbandingan MLA vs MHA](#perbandingan-mla-vs-mha)
-11. [Limitasi & Catatan Pengembangan](#limitasi--catatan-pengembangan)
-12. [Referensi](#referensi)
-13. [Lisensi](#lisensi)
+8. [Menjalankan Notebook](#menjalankan-notebook)
+9. [Konfigurasi Model yang Dipakai](#konfigurasi-model-yang-dipakai)
+10. [Struktur Proyek (Nyata)](#struktur-proyek-nyata)
+11. [Perbandingan MLA vs MHA](#perbandingan-mla-vs-mha)
+12. [Limitasi & Catatan Pengembangan](#limitasi--catatan-pengembangan)
+13. [Referensi](#referensi)
+14. [Lisensi](#lisensi)
 
 ---
 
 ## 🌟 Latar Belakang
 
-**Multi-Head Latent Attention (MLA)** adalah varian inovatif dari mekanisme *self-attention* yang secara spesifik dirancang untuk mengatasi *bottleneck* utama pada inferensi Large Language Models (LLM): **ukuran *Key-Value (KV) cache***.
+**Multi-Head Latent Attention (MLA)** adalah varian *self-attention* yang dirancang untuk mengatasi *bottleneck* utama pada inferensi Large Language Models (LLM): **ukuran *Key-Value (KV) cache***.
 
-Pada mekanisme *Multi-Head Attention (MHA)* standar, setiap token harus menyimpan representasi vektor penuh dari **Key** ($K$) dan **Value** ($V$) untuk seluruh *attention heads*. Akibatnya, alokasi memori akan tumbuh secara linear terhadap:
-1. Panjang urutan (*sequence length*).
-2. Jumlah *heads* ($n_h$).
-3. Dimensi per *head* ($d_h$).
+Pada *Multi-Head Attention (MHA)* standar, setiap token menyimpan representasi $K$ dan $V$ penuh untuk seluruh *heads*, sehingga memori tumbuh linear terhadap panjang urutan, jumlah *heads* ($n_h$), dan dimensi per *head* ($d_h$).
 
-**Solusi MLA:** Mekanisme ini memproyeksikan $K$ dan $V$ ke dalam sebuah **vektor laten berdimensi rendah (*low-dimensional latent vector*)** sebelum disimpan ke dalam *cache*. Dengan demikian, sistem hanya perlu menyimpan representasi terkompresi ini, bukan vektor $K$ dan $V$ secara terpisah untuk setiap *head*, sehingga menghemat penggunaan memori (VRAM) secara signifikan.
+**Solusi MLA:** memproyeksikan $K$ dan $V$ ke **vektor laten berdimensi rendah** sebelum disimpan ke cache, sehingga hanya representasi terkompresi yang perlu disimpan — bukan vektor $K$/$V$ terpisah per *head*.
 
 ---
 
 ## 🎯 Masalah yang Diselesaikan MLA
 
-| Tantangan pada MHA Standar | Solusi Inovatif pada MLA |
+| Tantangan pada MHA Standar | Solusi pada MLA |
 | :--- | :--- |
-| Pertumbuhan KV cache sebesar $\mathcal{O}(n_h \cdot d_h)$ per token | Kompresi laten, menjadikan KV cache hanya $\mathcal{O}(d_c)$ per token |
-| Dekomposisi *low-rank* merusak sifat RoPE konvensional | Menggunakan **Decoupled RoPE**, memisahkan rotasi ke sub-komponen khusus |
-| Pertukaran (*trade-off*) antara efisiensi memori & kapasitas model | Kapasitas dijaga ketat melalui mekanisme *up-projection* yang presisi |
+| Pertumbuhan KV cache $\mathcal{O}(n_h \cdot d_h)$ per token | Kompresi laten, KV cache jadi $\mathcal{O}(d_c)$ per token |
+| Dekomposisi *low-rank* merusak sifat RoPE | **Decoupled RoPE**: rotasi dipisah ke sub-komponen khusus |
+| *Trade-off* efisiensi memori vs kapasitas model | Kapasitas dijaga lewat *up-projection* yang presisi |
 
 ---
 
 ## 🏗️ Arsitektur Keseluruhan
-
-Posisi komponen MLA dalam satu *Transformer Block* (menggunakan arsitektur *pre-norm* dengan *residual connections*):
 
 ```text
                     ┌────────────────────────────────────┐
@@ -88,27 +85,23 @@ Posisi komponen MLA dalam satu *Transformer Block* (menggunakan arsitektur *pre-
 
 ## 📐 Formulasi Matematis (LaTeX)
 
-Bagian ini mendefinisikan operasi matematis utama menggunakan notasi LaTeX standar.
-
 ### 1. Kompresi Low-Rank untuk Key & Value
 
-Misalkan representasi *hidden state* pada token ke-$t$ adalah $\mathbf{h}_t \in \mathbb{R}^{d_{\mathrm{model}}}$. Representasi ini diproyeksikan ke dalam sebuah vektor laten bersama (*joint latent vector*) $\mathbf{c}_t^{KV} \in \mathbb{R}^{d_c}$, di mana dimensi laten $d_c$ jauh lebih kecil daripada dimensi total MHA ($d_c \ll n_h \cdot d_h$):
+$\mathbf{h}_t \in \mathbb{R}^{d_{\mathrm{model}}}$ diproyeksikan ke vektor laten bersama $\mathbf{c}_t^{KV} \in \mathbb{R}^{d_c}$, dengan $d_c \ll n_h \cdot d_h$:
 
 $$
 \mathbf{c}_t^{KV} = W^{DKV} \, \mathbf{h}_t
 $$
 
-Komponen *Key* ($\mathbf{k}_t^{C}$) dan *Value* ($\mathbf{v}_t^{C}$) direkonstruksi langsung dari vektor laten bersama ini menggunakan matriks *up-projection*:
+*Key* dan *Value* direkonstruksi dari vektor laten via *up-projection*:
 
 $$
 \mathbf{k}_t^{C} = W^{UK} \, \mathbf{c}_t^{KV}, \quad \mathbf{v}_t^{C} = W^{UV} \, \mathbf{c}_t^{KV}
 $$
 
-> **💡 Inti Efisiensi:** Pada tahap inferensi (*generation*), sistem **hanya** menyimpan $\mathbf{c}_t^{KV}$ dalam memori (KV Cache), mereduksi penggunaan memori secara drastis.
+> **💡 Inti Efisiensi:** saat inferensi, hanya $\mathbf{c}_t^{KV}$ yang disimpan di KV Cache.
 
-### 2. Kompresi Query (Opsional untuk Pelatihan)
-
-Untuk mengurangi kompleksitas memori saat fase pelatihan (*training*), hal yang sama juga dapat diterapkan pada *Query*:
+### 2. Kompresi Query
 
 $$
 \mathbf{c}_t^{Q} = W^{DQ} \, \mathbf{h}_t, \quad \mathbf{q}_t^{C} = W^{UQ} \, \mathbf{c}_t^{Q}
@@ -116,41 +109,33 @@ $$
 
 ### 3. Matriks Attention
 
-Fungsi *attention* dihitung melalui *scaled dot-product* biasa, ditambah dengan dimensi rotasi (*rotary component*):
-
 $$
 \mathrm{Attention}(Q, K, V) = \mathrm{softmax}\left(\frac{Q K^{\top}}{\sqrt{d_h + d_h^R}}\right) V
 $$
-
-*Dimana $d_h^R$ merepresentasikan jumlah dimensi yang dialokasikan khusus untuk informasi rotasi posisional (RoPE).*
 
 ---
 
 ## 🔄 Decoupled RoPE
 
-Rotary Positional Embedding (RoPE) merotasi komponen vektor berdasarkan posisinya *sebelum* dot-product.
-Namun, apabila RoPE diterapkan secara langsung pada vektor yang direkonstruksi dari laten ($\mathbf{k}_t^{C}$), komputasi matriks *up-projection* ($W^{UK}$) menjadi sangat tidak efisien karena harus dieksekusi terus-menerus secara dinamis terhadap posisi token $t$.
+Jika RoPE diterapkan langsung ke $\mathbf{k}_t^{C}$ (hasil rekonstruksi dari laten), matriks *up-projection* $W^{UK}$ harus dieksekusi ulang secara dinamis per posisi — tidak efisien.
 
-**Solusi (Decoupled RoPE):**
-Informasi posisional **dipisahkan (decoupled)** dari komponen semantik utama. Sebuah *Key Rotary* berdimensi kecil ($\mathbf{k}_t^{R}$) diciptakan **langsung dari input** ($\mathbf{h}_t$), dilewatkan ke dalam RoPE, dan disebarkan (*broadcasted*) ke seluruh *attention heads*:
+**Solusi:** komponen posisional dipisah. *Key Rotary* kecil dibuat langsung dari $\mathbf{h}_t$:
 
 $$
 \mathbf{k}_t^{R} = \mathrm{RoPE}\Big(W^{KR} \, \mathbf{h}_t\Big)
 $$
 
-Komponen *Key* akhir merupakan gabungan (*concatenation*) antara komponen semantik laten dengan komponen rotary:
+*Key* akhir = gabungan komponen semantik laten + rotary:
 
 $$
 \mathbf{k}_t = \Big[\, \mathbf{k}_t^{C} \; \Vert \; \mathbf{k}_t^{R} \,\Big]
 $$
 
-Polanya serupa untuk *Query*:
+Pola sama untuk *Query*:
 
 $$
 \mathbf{q}_t^{R} = \mathrm{RoPE}\Big(W^{QR} \, \mathbf{c}_t^{Q}\Big), \quad \mathbf{q}_t = \Big[\, \mathbf{q}_t^{C} \; \Vert \; \mathbf{q}_t^{R} \,\Big]
 $$
-
-Hasil akhir menjamin bahwa RoPE tetap mempertahankan sifat matematis utamanya di mana perhitungan skor dependensi murni didasarkan pada selisih jarak relatif antar token $(m - n)$:
 
 $$
 \langle f_q(x_m, m),\, f_k(x_n, n) \rangle = g(x_m, x_n, m-n)
@@ -158,133 +143,131 @@ $$
 
 ---
 
-## 🧩 Struktur Model Lengkap
+## 🧩 Struktur Notebook (Cell-by-Cell)
 
-Alur data model ini dari hulu ke hilir:
+`AI_Transfomers.ipynb` berisi **32 cell**, dibagi jadi 8 bagian berurutan (harus dijalankan top-to-bottom karena setiap bagian bergantung pada variabel dari bagian sebelumnya):
 
-```text
-[Input] Token IDs
-       │
-[Layer] Token Embedding
-       │
-┌──────┴────── [Transformer Block x N] ──────┐
-│ 1. RMSNorm                                 │
-│ 2. Multi-Head Latent Attention (w/ RoPE)   │
-│ 3. Residual Add                            │
-│ 4. RMSNorm                                 │
-│ 5. Mixture-of-Experts (MoE) Feed Forward   │
-│ 6. Residual Add                            │
-└──────────────────────┬─────────────────────┘
-                       │
-[Layer] RMSNorm (Final)
-                       │
-[Layer] Linear Output (Vocab Projection)
-                       │
-[Output] Logits ──► Softmax (CrossEntropyLoss)
-```
+| # | Bagian | Isi |
+| :-- | :--- | :--- |
+| 1 | **Setup Library & Dataset** | Import (`torch`, `transformers`, `datasets`), cek CUDA, login Hugging Face Hub, load dataset `nampdn-ai/tiny-strange-textbooks` |
+| 2 | **Split & Tokenisasi** | Subset 50.000 sample, split train/val/test (98/1/1), tokenisasi dengan `bert-base-uncased` (`max_length=256`) |
+| 3 | **Embedding & RoPE** | `nn.Embedding`, kelas `RotaryPositionEmbedding` (demo standalone) |
+| 4 | **Multi-Head Latent Attention** | Kelas `MultiHeadLatentAttention` lengkap (down/up-projection, decoupled RoPE) |
+| 5 | **MoE Feed Forward** | Kelas `Expert` (SwiGLU) dan `MoEFeedForward` (router top-k + shared expert + auxiliary load-balancing loss) |
+| 6 | **Transformer Block** | Kelas `RMSNorm` dan `TransformerBlock` (pre-norm + residual) |
+| 7 | **Training** | Kelas `Nvoin_Language_Model`, collate function, loop training dengan mixed precision, gradient accumulation, time-boxed stopping, checkpointing |
+| 8 | **Inference / Prompting** | Load checkpoint, fungsi `generate()` autoregresif (temperature, top-k, top-p), sesi chat interaktif |
 
 ---
 
 ## 💻 Instalasi
 
-Untuk mencoba implementasi ini secara lokal, pastikan Anda menggunakan lingkungan Python terbaru dan pustaka PyTorch.
+Proyek ini **belum berbentuk package Python**, jadi tidak ada `pip install -r requirements.txt` dari repo. Yang perlu disiapkan:
 
 ```bash
-git clone https://github.com/<username>/<repo-name>.git
-cd <repo-name>
-pip install -r requirement.txt
+pip install torch transformers datasets huggingface_hub matplotlib
 ```
+
+Kamu juga butuh:
+- **Akun Hugging Face** (notebook memanggil `login()` di cell 3 — siapkan token akses).
+- **GPU disarankan.** Notebook mendeteksi CUDA otomatis, tapi tetap bisa jalan di CPU (lebih lambat).
+- Waktu load dataset: menurut komentar penulis, proses ini **±26-30 menit**.
 
 ---
 
-## 🚀 Penggunaan Cepat
+## ▶️ Menjalankan Notebook
 
-Berikut adalah contoh inisiasi model *GPT-Style* dengan dukungan MoE:
+Buka `AI_Transfomers.ipynb` di Jupyter/Colab dan jalankan cell **secara berurutan dari atas ke bawah** — setiap bagian bergantung pada variabel yang dibuat di bagian sebelumnya (tokenizer, dataset, model, dll didefinisikan sebagai variabel global, bukan diimpor dari module terpisah).
+
+Ringkasan alur:
+1. Login HF → load & tokenisasi dataset.
+2. Definisikan kelas (`MultiHeadLatentAttention`, `MoEFeedForward`, `TransformerBlock`, `Nvoin_Language_Model`).
+3. Inisialisasi model dengan hyperparameter di cell konfigurasi.
+4. Jalankan loop training (checkpoint otomatis tersimpan di folder `checkpoints/`).
+5. Load checkpoint dan jalankan sesi chat interaktif untuk mencoba generate teks.
+
+> Karena semua kelas berada di cell notebook (bukan file `.py` terpisah), **belum bisa** melakukan `from model import Nvoin_Language_Model` seperti pada proyek berbasis package. Kalau kamu ingin dipakai ulang di script/aplikasi lain, kelas-kelas tersebut perlu diekstrak dulu ke file `.py` — lihat bagian [Limitasi](#limitasi--catatan-pengembangan).
+
+---
+
+## ⚙️ Konfigurasi Model yang Dipakai
+
+Ini konfigurasi yang benar-benar dipakai pada cell training (bukan angka ilustratif):
 
 ```python
-import torch
-from model import Nvoin_Language_Model
-
-# Konfigurasi Model
-model = Nvoin_Language_Model(
-    vocab_size=32000,
-    d_model=512,
-    n_layers=6,
-    n_heads=8,
-    d_head=64,
-    d_rotary=32,            # Dimensi Decoupled RoPE
-    d_latent_kv=128,        # Kompresi laten untuk K/V
-    d_latent_q=192,         # Kompresi laten untuk Q
-    d_ffn_hidden=1024,
-    n_routed_experts=8,     # Total Expert MoE
-    n_shared_experts=1,     # Expert Umum
-    top_k=2,                # Routing 2 expert terbaik per token
-    max_seq_len=2048,
-)
-
-# Dummy Input Data [Batch, Sequence_Length]
-token_ids = torch.randint(0, 32000, (4, 16))
-
-# Forward Pass
-logits, aux_loss = model(token_ids)
-
-print(f"Bentuk Output Logits: {logits.shape}") 
-# Output: torch.Size([4, 16, 32000])
+VOCAB_SIZE    = tokenizer.vocab_size   # bert-base-uncased
+D_MODEL       = 256
+N_LAYERS      = 4
+N_HEADS       = 8
+D_HEAD        = 32
+D_ROTARY      = 16      # harus genap
+D_LATENT_KV   = 64
+D_LATENT_Q    = 96
+D_FFN_HIDDEN  = 512
+N_ROUTED_EXP  = 8
+N_SHARED_EXP  = 1
+TOP_K         = 2
+DROPOUT       = 0.1
 ```
 
-*(Lihat notebook `AI_Transfomers.ipynb` untuk alur training autoregresif dan inference/prompting yang lengkap).*
+Hyperparameter training:
+
+```python
+N_EPOCHS            = 3
+LEARNING_RATE        = 3e-4
+WEIGHT_DECAY          = 0.01
+GRAD_CLIP             = 1.0
+MAX_TRAINING_HOURS    = 5      # training berhenti otomatis walau epoch belum selesai
+```
+
+Training memakai **mixed precision** (`torch.cuda.amp`) dan **gradient accumulation** untuk menghemat VRAM.
 
 ---
 
-## 📁 Struktur Proyek
+## 📁 Struktur Proyek (Nyata)
 
 ```text
 .
-├── model.py              # Wrapper arsitektur utama model
-├── mla.py                # Mekanisme Multi-Head Latent Attention
-├── moe.py                # MoE Feed Forward & Expert Router
-├── rope.py               # Algoritma Rotary Position Embedding
-├── norm.py               # Lapisan Root Mean Square Normalization
-├── block.py              # Definisi TransformerBlock
-├── train.py              # Skrip eksekusi pelatihan
-├── AI_Transfomers.ipynb  # Notebook panduan lengkap (Kode dari A-Z)
-└── README.md             # Dokumentasi ini
+├── AI_Transfomers.ipynb   # Satu-satunya file kode: dataset, model, training, inference
+├── checkpoints/           # Dibuat otomatis saat training (berisi nvoin_checkpoint.pt)
+└── README.md              # Dokumentasi ini
 ```
+
+Tidak ada `model.py`, `mla.py`, `moe.py`, `rope.py`, `norm.py`, `block.py`, atau `train.py` terpisah di proyek ini saat ini.
 
 ---
 
 ## ⚖️ Perbandingan MLA vs MHA
 
-| Atribut Pengukuran | MHA (Standar) | MLA (DeepSeek-V2) |
+| Atribut | MHA (Standar) | MLA (DeepSeek-V2) |
 | :--- | :--- | :--- |
-| **Penyimpanan Cache** | Vektor $K, V$ secara penuh per *head* | Vektor laten $\mathbf{c}_t^{KV} + \mathbf{k}_t^{R}$ |
+| **Penyimpanan Cache** | Vektor $K, V$ penuh per *head* | Vektor laten $\mathbf{c}_t^{KV} + \mathbf{k}_t^{R}$ |
 | **Beban Memori Cache** | $\mathcal{O}(n_h \cdot d_h)$ per token | $\mathcal{O}(d_c + d_h^R)$ per token |
-| **Pemrosesan Posisi** | Digabungkan secara inheren pada vektor $K$ | Dipisahkan (*Decoupled*) dari semantik |
-| **Efisiensi Low-Rank** | Tidak relevan | Optimal, komputasi terkompresi |
+| **Pemrosesan Posisi** | Melekat pada vektor $K$ | Dipisahkan (*Decoupled*) |
+| **Efisiensi Low-Rank** | Tidak relevan | Optimal |
 
 ---
 
 ## ⚠️ Limitasi & Catatan Pengembangan
 
-Implementasi dalam repositori ini ditujukan sebagai **materi pembelajaran (educational purpose)** dan bukan *production-grade framework*. Beberapa abstraksi telah disederhanakan:
-
-1. **Belum Ada Matrix Absorption saat Inferensi:** 
-   Pada model skala produksi seperti DeepSeek, $W^{UK}$ dilebur (*absorbed*) langsung ke dalam matriks *up-projection* saat inferensi, meniadakan perlunya rekonstruksi penuh vektor $K$. Implementasi ini masih melakukan komputasi rekonstruksi pada *forward pass* untuk alasan keterbacaan kode.
-2. **MoE Routing Sederhana:** 
-   Proses *routing* MoE pada *loop* Python saat ini belum memanfaatkan kompilasi kernel *scatter/gather* di tingkat C++/CUDA, sehingga belum *optimized* untuk ukuran batch/expert raksasa.
-3. **Generasi Autoregresif Dasar:** 
-   Fungsi KV-Cache yang statis dan optimal untuk kecepatan respons *streaming* masih dapat ditingkatkan lagi pemanfaatannya (saat ini *generate()* diimplementasikan melalui proses agregasi konteks yang standar).
+1. **Belum ada matrix absorption saat inferensi.** $W^{UK}$ belum dilebur ke *up-projection*; notebook masih melakukan rekonstruksi penuh $K$ demi keterbacaan kode.
+2. **MoE routing masih loop Python murni** — belum memakai kernel scatter/gather CUDA, jadi belum optimal untuk skala expert/batch besar.
+3. **Tokenizer WordPiece (`bert-base-uncased`) dipakai untuk causal LM.** Ini bukan pilihan standar (biasanya BPE seperti GPT-2) — worth dicoba diganti kalau tujuan proyek berkembang ke arah generasi teks yang lebih natural.
+4. **Struktur satu-file.** Semua kelas ada dalam satu notebook; belum ada pemisahan module (`.py`) sehingga kode belum reusable sebagai package. Kalau perlu dipakai di luar notebook, ekstrak kelas ke file terpisah (`rope.py`, `mla.py`, `moe.py`, `norm.py`, `block.py`, `model.py`) secara manual.
+5. **Ada baris evaluasi redundan di akhir training** (`evaluate(nvoin_model, test_dataset, device)` dipanggil sebelum `evaluate(nvoin_model, test_loader, device)`) — baris pertama memakai `test_dataset` (bukan `DataLoader`) dan berpotensi error atau tidak diperlukan; sebaiknya dihapus.
+6. **Cell demo RoPE standalone (bagian 3)** memanggil `RotaryPositionEmbedding(seq_len, embed_dim)`, padahal signature-nya `__init__(self, dim, max_seq_len)` — parameter tertukar. Tidak memengaruhi model final (MLA membuat instance RoPE-nya sendiri dengan benar), tapi menyesatkan sebagai contoh berdiri sendiri.
+7. **Generasi autoregresif dasar** — KV-cache belum dioptimalkan untuk streaming; `generate()` masih memakai agregasi konteks standar.
 
 ---
 
 ## 📚 Referensi
 
 1. DeepSeek-AI (2024). *DeepSeek-V2: A Strong, Economical, and Efficient Mixture-of-Experts Language Model.*
-2. Su, Jianlin et al. (2021). *RoFormer: Enhanced Transformer margin with Rotary Position Embedding.*
+2. Su, Jianlin et al. (2021). *RoFormer: Enhanced Transformer with Rotary Position Embedding.*
 3. Vaswani, Ashish et al. (2017). *Attention Is All You Need.*
 
 ---
 
 ## 📜 Lisensi
 
-Kode dan dokumentasi proyek ini dilisensikan di bawah spesifikasi [MIT License](LICENSE).
+Belum ada file `LICENSE` di proyek ini. Tambahkan file lisensi (mis. MIT) secara eksplisit bila proyek ini ingin didistribusikan dengan lisensi tertentu.
