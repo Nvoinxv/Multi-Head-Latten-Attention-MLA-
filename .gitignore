@@ -42,3 +42,7 @@ env/
 .idea/
 *.swp
 *.swo
+
+# checkpoint model AI
+checkpoints/
+*.pt
