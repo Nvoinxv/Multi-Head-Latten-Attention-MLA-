@@ -165,7 +165,7 @@ $$
 Proyek ini **belum berbentuk package Python**, jadi tidak ada `pip install -r requirements.txt` dari repo. Yang perlu disiapkan:
 
 ```bash
-pip install torch transformers datasets huggingface_hub matplotlib
+pip install -r requirement.txt
 ```
 
 Kamu juga butuh:
